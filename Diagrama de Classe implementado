@@ -1,0 +1,101 @@
+from abc import ABC, abstractmethod
+from datetime import date
+
+class Transacao(ABC):
+    @abstractmethod
+    def registrar(self, conta):
+        pass
+
+
+class Deposito(Transacao):
+    def __init__(self, valor: float):
+        self.valor = valor
+
+    def registrar(self, conta):
+        conta.depositar(self.valor)
+
+
+class Saque(Transacao):
+    def __init__(self, valor: float):
+        self.valor = valor
+
+    def registrar(self, conta):
+        conta.sacar(self.valor)
+
+
+class Historico:
+    def __init__(self):
+        self.transacoes = []
+
+    def adicionar_transacao(self, transacao: Transacao):
+        self.transacoes.append(transacao)
+
+
+class Cliente:
+    def __init__(self, endereco: str):
+        self.endereco = endereco
+        self.contas = []
+
+    def adicionar_conta(self, conta):
+        self.contas.append(conta)
+
+    def realizar_transacao(self, conta, transacao: Transacao):
+        transacao.registrar(conta)
+        conta.historico.adicionar_transacao(transacao)
+
+
+class PessoaFisica(Cliente):
+    def __init__(self, endereco: str, cpf: str, nome: str, data_nascimento: date):
+        super().__init__(endereco)
+        self.cpf = cpf
+        self.nome = nome
+        self.data_nascimento = data_nascimento
+
+class Conta:
+    def __init__(self, cliente: Cliente, numero: int, agencia: str = "0001"):
+        self.saldo = 0.0
+        self.numero = numero
+        self.agencia = agencia
+        self.cliente = cliente
+        self.historico = Historico()
+
+    def saldo_atual(self):
+        return self.saldo
+
+    @classmethod
+    def nova_conta(cls, cliente: Cliente, numero: int):
+        return cls(cliente, numero)
+
+    def sacar(self, valor: float) -> bool:
+        if valor > self.saldo:
+            print("saldo insuficiente")
+            return False
+        self.saldo -= valor
+        return True
+
+    def depositar(self, valor: float) -> bool:
+        if valor <= 0:
+            print("valor de depósit inválido")
+            return False
+        self.saldo += valor
+        return True
+
+
+class ContaCorrente(Conta):
+    def __init__(self, cliente: Cliente, numero: int, limite: float = 500.0, limite_saques: int = 3):
+        super().__init__(cliente, numero)
+        self.limite = limite
+        self.limite_saques = limite_saques
+        self.saques_realizados = 0
+
+    def sacar(self, valor: float) -> bool:
+        if self.saques_realizados >= self.limite_saques:
+            print("limite atingido")
+            return False
+        if valor > self.saldo + self.limite:
+            print("saldo insuficiente")
+            return False
+
+        self.saldo -= valor
+        self.saques_realizados += 1
+        return True
